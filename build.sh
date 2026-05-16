@@ -8,17 +8,17 @@ if [[ "$variant" == "stable" ]]; then
   downloadurl="https://discord.com/api/download?platform=linux&format=tar.gz"
   pkgname="discord"
   appname="Discord"
-  execname="Discord"
+  execname="discord"
 elif [[ "$variant" == "canary" ]]; then
   downloadurl="https://canary.discord.com/api/download?platform=linux&format=tar.gz"
   pkgname="discord-canary"
   appname="Discord Canary"
-  execname="DiscordCanary"
+  execname="discord"
 elif [[ "$variant" == "ptb" ]]; then
   downloadurl="https://ptb.discord.com/api/download?platform=linux&format=tar.gz"
   pkgname="discord-ptb"
   appname="Discord PTB"
-  execname="DiscordPTB"
+  execname="discord"
 else
   echo "error: unknown variant '${1}'. use: stable, canary, or ptb" >&2
   exit 1
