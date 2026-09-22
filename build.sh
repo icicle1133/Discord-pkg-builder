@@ -5,20 +5,20 @@ variant="${1:-stable}"
 variant="${variant,,}"
 
 if [[ "$variant" == "stable" ]]; then
-  downloadurl="https://discord.com/api/download?platform=linux&format=tar.gz"
-  pkgname="discord"
-  appname="Discord"
-  execname="discord"
+  url="https://discord.com/api/download?platform=linux&format=tar.gz"
+  pkg="discord"
+  app="Discord"
+  exe="discord"
 elif [[ "$variant" == "canary" ]]; then
-  downloadurl="https://canary.discord.com/api/download?platform=linux&format=tar.gz"
-  pkgname="discord-canary"
-  appname="Discord Canary"
-  execname="discord"
+  url="https://canary.discord.com/api/download?platform=linux&format=tar.gz"
+  pkg="discord-canary"
+  app="Discord Canary"
+  exe="discord"
 elif [[ "$variant" == "ptb" ]]; then
-  downloadurl="https://ptb.discord.com/api/download?platform=linux&format=tar.gz"
-  pkgname="discord-ptb"
-  appname="Discord PTB"
-  execname="discord"
+  url="https://ptb.discord.com/api/download?platform=linux&format=tar.gz"
+  pkg="discord-ptb"
+  app="Discord PTB"
+  exe="discord"
 else
   echo "error: unknown variant '${1}'. use: stable, canary, or ptb" >&2
   exit 1
@@ -26,98 +26,94 @@ fi
 
 for cmd in curl tar fakeroot makepkg; do
   if ! command -v "$cmd" &>/dev/null; then
-    echo "error: '$cmd' not found. run discord-pkg-deps.sh first." >&2
+    echo "error: '$cmd' not found. run ./install-deps.sh first." >&2
     exit 1
   fi
 done
 
-rundir="$(pwd)"
-workdir="$(mktemp -d "${TMPDIR:-/tmp}/discord-pkg.XXXXXX")"
+run_dir="$(pwd)"
+work_dir="$(mktemp -d /tmp/discord-pkg.XXXXXX)"
 
-tarball="${workdir}/discord.tar.gz"
-curl -L --progress-bar -o "$tarball" "$downloadurl"
+tarball="${work_dir}/discord.tar.gz"
+curl -L --progress-bar -o "$tarball" "$url"
 
-extractdir="${workdir}/extracted"
-mkdir -p "$extractdir"
-tar -xzf "$tarball" -C "$extractdir"
+extract_dir="${work_dir}/extracted"
+mkdir -p "$extract_dir"
+tar -xzf "$tarball" -C "$extract_dir"
 
-discorddir="$(find "$extractdir" -mindepth 1 -maxdepth 1 -type d | head -n1)"
-if [[ -z "$discorddir" ]]; then
+discord_dir="$(find "$extract_dir" -mindepth 1 -maxdepth 1 -type d | head -n1)"
+if [[ -z "$discord_dir" ]]; then
   echo "error: could not find extracted discord directory." >&2
   exit 1
 fi
 
 version="unknown"
-buildinfo="${discorddir}/resources/build_info.json"
-if [[ -f "$buildinfo" ]]; then
-  version="$(grep -oP '"version"\s*:\s*"\K[^"]+' "$buildinfo" || true)"
+build_info="${discord_dir}/resources/build_info.json"
+if [[ -f "$build_info" ]]; then
+  version="$(grep -oP '"version"\s*:\s*"\K[^"]+' "$build_info" || true)"
 fi
 if [[ -z "$version" || "$version" == "unknown" ]]; then
-  version="$(basename "$discorddir" | grep -oP '[\d.]+$' || true)"
+  version="$(basename "$discord_dir" | grep -oP '[\d.]+$' || true)"
 fi
 if [[ -z "$version" ]]; then
   version="0.0.0"
 fi
 
-iconsrc="$(find "$discorddir" -name "discord.png" | head -n1 || true)"
+icon_src="$(find "$discord_dir" -name "discord.png" | head -n1 || true)"
 
-pkgbuilddir="${workdir}/pkgbuild"
-mkdir -p "$pkgbuilddir"
+pkgbuild_dir="${work_dir}/pkgbuild"
+install_dir="${pkgbuild_dir}/pkg/${pkg}/opt/${pkg}"
+mkdir -p "$install_dir"
+cp -r "$discord_dir"/. "$install_dir/"
 
-installdir="${pkgbuilddir}/pkg/${pkgname}/opt/${pkgname}"
-mkdir -p "$installdir"
-cp -r "$discorddir"/. "$installdir/"
+icon_dir="${pkgbuild_dir}/pkg/${pkg}/usr/share/pixmaps"
+desktop_dir="${pkgbuild_dir}/pkg/${pkg}/usr/share/applications"
+bin_dir="${pkgbuild_dir}/pkg/${pkg}/usr/bin"
+mkdir -p "$icon_dir" "$desktop_dir" "$bin_dir"
 
-icondir="${pkgbuilddir}/pkg/${pkgname}/usr/share/pixmaps"
-mkdir -p "$icondir"
-if [[ -n "$iconsrc" && -f "$iconsrc" ]]; then
-  cp "$iconsrc" "${icondir}/${pkgname}.png"
+if [[ -n "$icon_src" && -f "$icon_src" ]]; then
+  cp "$icon_src" "${icon_dir}/${pkg}.png"
 fi
 
-desktopdir="${pkgbuilddir}/pkg/${pkgname}/usr/share/applications"
-mkdir -p "$desktopdir"
-cat > "${desktopdir}/${pkgname}.desktop" <<EOF
+cat > "${desktop_dir}/${pkg}.desktop" <<EOF
 [Desktop Entry]
-Name=${appname}
-Exec=/opt/${pkgname}/${execname}
-Icon=${pkgname}
+Name=${app}
+Exec=/opt/${pkg}/${exe}
+Icon=${pkg}
 Type=Application
 Categories=Network;InstantMessaging;
 EOF
 
-bindir="${pkgbuilddir}/pkg/${pkgname}/usr/bin"
-mkdir -p "$bindir"
-ln -sf "/opt/${pkgname}/${execname}" "${bindir}/${pkgname}"
+ln -sf "/opt/${pkg}/${exe}" "${bin_dir}/${pkg}"
 
-cat > "${pkgbuilddir}/PKGBUILD" <<EOF
-pkgname=${pkgname}
+cat > "${pkgbuild_dir}/PKGBUILD" <<EOF
+pkgname=${pkg}
 pkgver=${version}
 pkgrel=1
-pkgdesc="${appname} desktop app"
+pkgdesc="${app} desktop app"
 arch=('x86_64')
 url="https://discord.com"
 license=('custom')
 package() {
-  cp -r "\${srcdir}/pkg/${pkgname}/." "\${pkgdir}/"
+  cp -r "\${srcdir}/pkg/${pkg}/." "\${pkgdir}/"
 }
 EOF
 
-mkdir -p "${pkgbuilddir}/src"
-cp -r "${pkgbuilddir}/pkg" "${pkgbuilddir}/src/"
+mkdir -p "${pkgbuild_dir}/src"
+cp -r "${pkgbuild_dir}/pkg" "${pkgbuild_dir}/src/"
 
-cd "$pkgbuilddir"
+cd "$pkgbuild_dir"
 makepkg --nodeps --nocheck --noprogressbar 2>&1
 
-
-builtpkg="$(find "$pkgbuilddir" -maxdepth 1 -name "*.pkg.tar.zst" | head -n1)"
-if [[ -z "$builtpkg" ]]; then
+built_pkg="$(find "$pkgbuild_dir" -maxdepth 1 -name "*.pkg.tar.zst" | head -n1)"
+if [[ -z "$built_pkg" ]]; then
   echo "error: package build failed, no .pkg.tar.zst found." >&2
   exit 1
 fi
 
-finalpath="${rundir}/${pkgname}-${version}.pkg.tar.zst"
-cp "$builtpkg" "$finalpath"
+final_path="${run_dir}/${pkg}-${version}.pkg.tar.zst"
+cp "$built_pkg" "$final_path"
 
-sudo pacman -U "$finalpath"
+sudo pacman -U "$final_path"
 
-rm -rf "$workdir"
+rm -rf "$work_dir"
