@@ -76,7 +76,7 @@ version="$(printf '%s' "$version" | tr '-' '.')"
 icon_src="$(find "$discord_dir" -name "discord.png" | head -n1 || true)"
 
 rpm_dir="${work_dir}/rpm"
-for dir in build buildroot rpms sources specs srpms; do
+for dir in BUILD BUILDROOT RPMS SOURCES SPECS SRPMS; do
   mkdir -p "${rpm_dir}/${dir}"
 done
 
@@ -116,7 +116,7 @@ if [[ -n "$icon_file" ]]; then
 /usr/share/pixmaps/${icon_file}"
 fi
 
-cat > "${rpm_dir}/specs/${pkg}.spec" <<EOF
+cat > "${rpm_dir}/SPECS/${pkg}.spec" <<EOF
 Name: ${pkg}
 Version: ${version}
 Release: 1%{?dist}
@@ -139,9 +139,9 @@ cp -r ${install_root}/. %{buildroot}/
 ${file_list}
 EOF
 
-rpmbuild --define "_topdir ${rpm_dir}" -bb "${rpm_dir}/specs/${pkg}.spec"
+rpmbuild --define "_topdir ${rpm_dir}" -bb "${rpm_dir}/SPECS/${pkg}.spec"
 
-rpm_path="$(find "${rpm_dir}/rpms" -name "*.rpm" | head -n1)"
+rpm_path="$(find "${rpm_dir}/RPMS" -name "*.rpm" | head -n1)"
 if [[ -z "$rpm_path" ]]; then
   echo "error: package build failed, no .rpm found." >&2
   exit 1
